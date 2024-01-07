@@ -10,8 +10,7 @@ if len(sys.argv) < 2 :
 keySize = sys.argv[1]
 
 root = f"./keys-{keySize}"
-primesFnp = "./primes.txt"
-finalPrimesFnd = f"./final-primes-{keySize}-2.txt"
+finalPrimesFnd = f"./final-primes-{keySize}.txt"
 
 primesList = []
 
@@ -53,93 +52,87 @@ def list_files_in_folder(fp):
 	ordered_files = sorted(files, key=lambda f: os.path.getmtime(os.path.join(fp, f)))
 	# ordered_files = ordered_files[0 : KEY_LIMIT]
 
-	with open(primesFnp, 'w') as fprimes :		
-		for fn in ordered_files:
-			print(f"Clé {fn} ...")
+	for fn in ordered_files:
+		print(f"Clé {fn} ...")
 
-			fnp = os.path.join(fp, fn)
-			with open(fnp) as f:
-				content = f.read()
-				mapedP = list(map(lambda x : x['p'], primesList))
-				mapedQ = list(map(lambda x : x['q'], primesList))
+		fnp = os.path.join(fp, fn)
+		with open(fnp) as f:
+			content = f.read()
+			mapedP = list(map(lambda x : x['p'], primesList))
+			mapedQ = list(map(lambda x : x['q'], primesList))
 
-				# Executing BASH command
+			# Executing BASH command
 
-				cmd = f"openssl rsa -noout -text -in {fnp}"
+			cmd = f"openssl rsa -noout -text -in {fnp}"
 
-				retCmd = subprocess.check_output(cmd, shell = True, executable = "/bin/bash", stderr = subprocess.STDOUT)
+			retCmd = subprocess.check_output(cmd, shell = True, executable = "/bin/bash", stderr = subprocess.STDOUT)
 
-				# Getting command result
+			# Getting command result
 
-				chunks = [line.decode() for line in retCmd.splitlines()]
-				ret = '\n'.join(chunks)
+			chunks = [line.decode() for line in retCmd.splitlines()]
+			ret = '\n'.join(chunks)
 
-				prime1, prime2 = getPrimes(ret) # Getting primes from extraction using regexp
+			prime1, prime2 = getPrimes(ret) # Getting primes from extraction using regexp
 
-				fndP = False
-				fndQ = False
-				fndPQ = False
+			fndP = False
+			fndQ = False
+			fndPQ = False
 
-				# Checking if this prime numbers have already been found
+			# Checking if this prime numbers have already been found
 
-				try :
-					# P
-					idxP = mapedP.index(prime1)
-					primeKey = primesList[idxP]
-					# fprimes.write(f"Doublon de nombre premier détecté (P : {primeKey['p']}), clé de base : {primeKey['originalKey']}, clé contenant le doublon : {primeKey['copiesP']}\n")
+			try :
+				# P
+				idxP = mapedP.index(prime1)
+				primeKey = primesList[idxP]
+			
+				# Q
+				idxQ = mapedQ.index(prime2)
+				primeKey = primesList[idxQ]
+
+				if idxP != idxQ :
+					raise ValueError("Different primes.")
 				
-					# Q
-					idxQ = mapedQ.index(prime2)
-					primeKey = primesList[idxQ]
+				print(f"Doublons détectés pour les deux nombres (clé : {primeKey['originalKey']}) !")
+				primesList[idxQ]['copiesPQ'].append(fn) # Adding current key filename to copies found on Q prime
+				fndPQ = True # Setting to true if both numbers have been found in previous keys
+			except ValueError :
+				pass
 
-					if idxP != idxQ :
-						raise ValueError("Different primes.")
+			try :
+				idxP = mapedP.index(prime1)
+				fndP = True
+				primeKey = primesList[idxP]
+				primesList[idxP]['copiesP'].append(fn) # Adding current key filename to copies found on P prime
+				print(f"Doublon détecté pour une clé, nombre P (clé : {primeKey['originalKey']}) !")
+			except ValueError :
+				pass
 
-					# fprimes.write(f"Doublon de nombre premier détecté (Q : {primeKey['q']}), clé de base : {primeKey['originalKey']}, clé contenant le doublon : {primeKey['copiesQ']}\n")
-					
-					print(f"Doublons détectés pour les deux nombres (clé : {primeKey['originalKey']}) !")
-					primesList[idxQ]['copiesPQ'].append(fn) # Adding current key filename to copies found on Q prime
-					fndPQ = True # Setting to true if both numbers have been found in previous keys
-				except ValueError :
-					pass
+			try :
+				idxQ = mapedQ.index(prime2)
+				fndQ = True
+				primeKey = primesList[idxQ]
+				primesList[idxQ]['copiesQ'].append(fn) # Adding current key filename to copies found on Q prime
+				print(f"Doublon détecté pour une clé, nombre Q (clé : {primeKey['originalKey']}) !")
+			except ValueError :
+				pass
 
-				try :
-					idxP = mapedP.index(prime1)
-					fndP = True
-					primeKey = primesList[idxP]
-					primesList[idxP]['copiesP'].append(fn) # Adding current key filename to copies found on P prime
-					print(f"Doublon détecté pour une clé, nombre P (clé : {primeKey['originalKey']}) !")
-				except ValueError :
-					pass
+			# Saving new key to be compared later, if no same prime has been found for the current one
 
-				try :
-					idxQ = mapedQ.index(prime2)
-					fndQ = True
-					primeKey = primesList[idxQ]
-					primesList[idxQ]['copiesQ'].append(fn) # Adding current key filename to copies found on Q prime
-					print(f"Doublon détecté pour une clé, nombre Q (clé : {primeKey['originalKey']}) !")
-				except ValueError :
-					pass
-
-				# Saving new key to be compared later, if no same prime has been found for the current one
-
-				if fndPQ :
-					nCommonPQDup += 1
-				elif fndP :
-					nCommonPDup += 1
-				elif fndQ :
-					nCommonQDup += 1
-				else :
-					primesList.append({
-						'copiesP' : [],
-						'copiesQ' : [],
-						'copiesPQ' : [],
-						'originalKey' : fn,
-						'p' : prime1,
-						'q' : prime2
-					})
-
-		fprimes.close()
+			if fndPQ :
+				nCommonPQDup += 1
+			elif fndP :
+				nCommonPDup += 1
+			elif fndQ :
+				nCommonQDup += 1
+			else :
+				primesList.append({
+					'copiesP' : [],
+					'copiesQ' : [],
+					'copiesPQ' : [],
+					'originalKey' : fn,
+					'p' : prime1,
+					'q' : prime2
+				})
 
 		# Log
 
