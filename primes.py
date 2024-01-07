@@ -14,8 +14,6 @@ finalPrimesFnd = f"./final-primes-{keySize}.txt"
 
 primesList = []
 
-# KEY_LIMIT = 1000
-
 # Detect
 
 def getPrimes (entry) :
@@ -50,7 +48,6 @@ def list_files_in_folder(fp):
 	nCommonPQDup = 0
 
 	ordered_files = sorted(files, key=lambda f: os.path.getmtime(os.path.join(fp, f)))
-	# ordered_files = ordered_files[0 : KEY_LIMIT]
 
 	for fn in ordered_files:
 		print(f"Clé {fn} ...")
